@@ -1,0 +1,75 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use WWW::Mechanize;
+use Web::Query;
+
+use constant ROOT => "https://www.deliverycode.com/";
+
+foreach my $user_id ( <DATA> ) {
+    chomp $user_id;
+    printf "[%4d] Upvoted\n",
+        $user_id
+        if do_vote($user_id);
+    
+    printf "[%4d] Number of votes for %s: %d\n",
+        $user_id,
+        account_name($user_id),
+        number_votes($user_id);
+}
+
+sub do_vote {
+    my $mech = WWW::Mechanize->new( quiet => 1 );
+    $mech->get(ROOT.'wishlist'.'/'.$_[0] );
+    if ( $mech->form_id('dc-vote-node-form--2') ) {
+        $mech->click();
+        return not undef;
+    }
+    return;
+}
+
+sub number_votes {
+    return query_for_user($_[0])->find('.vote-me-text')->text();
+}
+
+sub account_name {
+    my $page_header = query_for_user($_[0])->find('.page-header')->text();
+    $page_header =~ s/ Wishlist$|'s wishlist$//;
+    return $page_header;
+}
+
+sub query_for_user {
+    return _cached_query_for_user($_[0]);
+}
+
+
+
+
+{
+    my $cached;
+    
+    sub _cached_query_for_user {
+        my $user_id = shift;
+        
+        $cached->{$user_id} =
+            Web::Query->new_from_url( ROOT.'wishlist'.'/'.$user_id )
+            unless exists $cached->{$user_id};
+        return $cached->{$user_id};
+    }
+}
+
+__DATA__
+4828
+4060
+5364
+4096
+5383
+5387
+5394
+5395
+5411
+5385
+5389
+5406
